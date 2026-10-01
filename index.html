@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>日本旅行購物清單 Japan Shopping List</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            jpRed: '#E60012',
+            jpGold: '#D4AF37',
+            darkBg: '#0F172A',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen pb-24">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-red-600 to-rose-700 text-white p-4 sticky top-0 z-30 shadow-md">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🇯🇵</span>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">日本旅行購物清單</h1>
+          <p class="text-xs text-rose-100">Japan Travel Wishlist</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button onclick="toggleCategoryModal()" class="bg-white/20 hover:bg-white/30 text-xs px-2.5 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1">
+          <i class="fa-solid fa-tags"></i> 分類
+        </button>
+        <button onclick="togglePhrasesModal()" class="bg-white/20 hover:bg-white/30 text-xs px-2.5 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1">
+          <i class="fa-solid fa-language"></i> 日語
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Exchange Rate & View Mode Bar -->
+  <div class="bg-slate-800 text-white py-2 px-4 shadow-inner text-xs">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-1">
+        <span class="text-slate-400">匯率:</span>
+        <span class="font-mono text-emerald-400">1 JPY =</span>
+        <input type="number" id="exchangeRate" value="0.052" step="0.001" onchange="updateRate(this.value)" class="w-14 bg-slate-700 text-white px-1 py-0.5 rounded text-center text-xs border border-slate-600 focus:outline-none focus:border-emerald-400">
+        <span class="text-slate-400">HKD</span>
+      </div>
+
+      <!-- View Switcher Toggle -->
+      <div class="flex items-center bg-slate-700 rounded-lg p-0.5 border border-slate-600">
+        <button onclick="setViewMode('list')" id="btnViewList" class="px-2 py-0.5 rounded text-[11px] font-medium transition-all bg-slate-900 text-white shadow-xs">
+          <i class="fa-solid fa-list"></i> 列表
+        </button>
+        <button onclick="setViewMode('grid')" id="btnViewGrid" class="px-2 py-0.5 rounded text-[11px] font-medium transition-all text-slate-400">
+          <i class="fa-solid fa-border-all"></i> 格子
+        </button>
+      </div>
+
+      <div class="text-right">
+        <span class="text-slate-400">總計:</span>
+        <span id="totalJPY" class="font-bold text-yellow-400 ml-0.5">¥0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-md mx-auto p-3 space-y-3">
+    
+    <!-- Dynamic Category Bar -->
+    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="categoryBar"></div>
+
+    <!-- Quick Presets -->
+    <div class="bg-rose-50 border border-rose-100 rounded-xl p-2.5">
+      <div class="text-[11px] font-bold text-rose-800 mb-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-fire text-rose-500"></i> 一鍵加入熱門必買：
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button onclick="addPreset('EVE 止痛藥', '💊 藥妝', 1280)" class="text-xs bg-white text-rose-700 border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-100 shadow-2xs">+ EVE 止痛藥</button>
+        <button onclick="addPreset('休足時間', '💊 藥妝', 698)" class="text-xs bg-white text-rose-700 border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-100 shadow-2xs">+ 休足時間</button>
+        <button onclick="addPreset('龍角散', '💊 藥妝', 780)" class="text-xs bg-white text-rose-700 border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-100 shadow-2xs">+ 龍角散</button>
+        <button onclick="addPreset('合利他命 EX', '💊 藥妝', 5980)" class="text-xs bg-white text-rose-700 border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-100 shadow-2xs">+ 合利他命</button>
+      </div>
+    </div>
+
+    <!-- Items Container -->
+    <div id="itemList"></div>
+  </div>
+
+  <!-- Floating Add Button -->
+  <div class="fixed bottom-5 right-5 z-20">
+    <button onclick="openModal()" class="w-14 h-14 bg-gradient-to-tr from-red-600 to-rose-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-105 active:scale-95 transition-all">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+  </div>
+
+  <!-- Add / Edit Item Modal -->
+  <div id="itemModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-lg text-slate-800" id="modalTitle">新增日本購物項目</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+
+      <form id="itemForm" onsubmit="saveItem(event)" class="space-y-3">
+        <input type="hidden" id="editItemId">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">物品名稱 *</label>
+          <input type="text" id="itemName" required placeholder="例：合利他命強效錠 270錠" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">物品相片（影相/上傳外觀包裝）</label>
+          <div class="flex items-center gap-3">
+            <input type="file" id="itemImage" accept="image/*" onchange="previewImage(event)" class="hidden">
+            <label for="itemImage" class="cursor-pointer bg-slate-100 border border-dashed border-slate-300 hover:bg-slate-200 text-slate-600 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+              <i class="fa-solid fa-camera text-red-500"></i> 上傳圖片/影相
+            </label>
+            <div id="imagePreviewContainer" class="hidden relative w-12 h-12 border rounded-lg overflow-hidden">
+              <img id="imagePreview" class="w-full h-full object-cover">
+              <button type="button" onclick="removeImage()" class="absolute top-0 right-0 bg-red-600 text-white w-4 h-4 text-[10px] flex items-center justify-center">&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">分類</label>
+            <select id="itemCategory" class="w-full border rounded-lg p-2.5 text-sm outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">數量</label>
+            <input type="number" id="itemQty" value="1" min="1" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">預計單價 (JPY 円)</label>
+          <input type="number" id="itemPrice" placeholder="例：1980" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">備註 / 指定店舖或規格</label>
+          <input type="text" id="itemNote" placeholder="例：Matsumoto Kiyoshi 特價，買金色包裝" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+        </div>
+
+        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md text-sm mt-2">
+          儲存項目
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal (圖片大圖檢視) -->
+  <div id="imageLightbox" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeLightbox()">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white text-3xl font-bold p-2">&times;</button>
+    <img id="lightboxImage" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl">
+    <p id="lightboxCaption" class="text-white text-sm font-medium mt-3 bg-black/50 px-4 py-1.5 rounded-full"></p>
+  </div>
+
+  <!-- Category Manager Modal -->
+  <div id="categoryModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-lg text-slate-800">🏷️ 管理分類</h3>
+        <button onclick="toggleCategoryModal()" class="text-slate-400 text-xl">&times;</button>
+      </div>
+
+      <div class="flex gap-2">
+        <input type="text" id="newCategoryInput" placeholder="新增分類（例：🧸 玩具）" class="flex-1 border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-red-500">
+        <button onclick="addCategory()" class="bg-red-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-red-700">+ 新增</button>
+      </div>
+
+      <div id="categoryListManager" class="space-y-2 pt-2"></div>
+    </div>
+  </div>
+
+  <!-- Japanese Phrases Modal -->
+  <div id="phrasesModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-lg text-slate-800">🇯🇵 藥妝/超市實用日語</h3>
+        <button onclick="togglePhrasesModal()" class="text-slate-400 text-xl">&times;</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div class="p-3 bg-slate-50 rounded-lg border">
+          <p class="font-bold text-red-600">請問有這個嗎？（出示相片時用）</p>
+          <p class="text-slate-700 font-mono mt-1">これ、ありますか？</p>
+          <p class="text-xs text-slate-400">Kore, arimasu ka?</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-lg border">
+          <p class="font-bold text-red-600">請問可以在哪裡找到這個？</p>
+          <p class="text-slate-700 font-mono mt-1">これはどこにありますか？</p>
+          <p class="text-xs text-slate-400">Kore wa doko ni arimasu ka?</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-lg border">
+          <p class="font-bold text-red-600">請問可以退稅嗎？</p>
+          <p class="text-slate-700 font-mono mt-1">免税（めんぜい）できますか？</p>
+          <p class="text-xs text-slate-400">Menzei dekimasu ka?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let defaultCategories = ['💊 藥妝', '🍡 零食/食品', '🔌 電器/生活', '🛍️ 服飾/動漫', '📦 其他'];
+    let categories = JSON.parse(localStorage.getItem('jp_categories')) || defaultCategories;
+    let items = JSON.parse(localStorage.getItem('jp_shopping_items')) || [];
+    let exchangeRate = parseFloat(localStorage.getItem('jp_exchange_rate')) || 0.052;
+    let currentCategory = '全部';
+    let currentBase64Image = '';
+    let viewMode = localStorage.getItem('jp_view_mode') || 'list'; // 'list' or 'grid'
+
+    document.getElementById('exchangeRate').value = exchangeRate;
+
+    function saveToStorage() {
+      localStorage.setItem('jp_shopping_items', JSON.stringify(items));
+      localStorage.setItem('jp_categories', JSON.stringify(categories));
+      localStorage.setItem('jp_exchange_rate', exchangeRate);
+      localStorage.setItem('jp_view_mode', viewMode);
+      renderCategories();
+      renderItems();
+    }
+
+    function updateRate(val) {
+      exchangeRate = parseFloat(val) || 0.052;
+      saveToStorage();
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.getElementById('btnViewList').className = mode === 'list' 
+        ? 'px-2 py-0.5 rounded text-[11px] font-medium transition-all bg-slate-900 text-white shadow-xs' 
+        : 'px-2 py-0.5 rounded text-[11px] font-medium transition-all text-slate-400';
+      
+      document.getElementById('btnViewGrid').className = mode === 'grid' 
+        ? 'px-2 py-0.5 rounded text-[11px] font-medium transition-all bg-slate-900 text-white shadow-xs' 
+        : 'px-2 py-0.5 rounded text-[11px] font-medium transition-all text-slate-400';
+
+      saveToStorage();
+    }
+
+    function openLightbox(imgSrc, caption) {
+      if (!imgSrc) return;
+      document.getElementById('lightboxImage').src = imgSrc;
+      document.getElementById('lightboxCaption').innerText = caption || '';
+      document.getElementById('imageLightbox').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('imageLightbox').classList.add('hidden');
+    }
+
+    function renderCategories() {
+      const bar = document.getElementById('categoryBar');
+      bar.innerHTML = `<button onclick="filterCategory('全部')" class="cat-btn ${currentCategory === '全部' ? 'bg-red-600 text-white' : 'bg-white text-slate-600 border border-slate-200'} px-3 py-1.5 rounded-full whitespace-nowrap font-medium shadow-2xs">全部</button>`;
+      
+      categories.forEach(cat => {
+        const isActive = currentCategory === cat;
+        bar.innerHTML += `<button onclick="filterCategory('${cat}')" class="cat-btn ${isActive ? 'bg-red-600 text-white' : 'bg-white text-slate-600 border border-slate-200'} px-3 py-1.5 rounded-full whitespace-nowrap font-medium shadow-2xs">${cat}</button>`;
+      });
+
+      const select = document.getElementById('itemCategory');
+      select.innerHTML = '';
+      categories.forEach(cat => {
+        select.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+
+      const managerList = document.getElementById('categoryListManager');
+      managerList.innerHTML = '';
+      categories.forEach((cat, index) => {
+        managerList.innerHTML += `
+          <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border text-sm">
+            <span class="font-medium text-slate-700">${cat}</span>
+            <button onclick="deleteCategory(${index})" class="text-slate-400 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        `;
+      });
+    }
+
+    function addCategory() {
+      const input = document.getElementById('newCategoryInput');
+      const val = input.value.trim();
+      if (val && !categories.includes(val)) {
+        categories.push(val);
+        input.value = '';
+        saveToStorage();
+      }
+    }
+
+    function deleteCategory(index) {
+      if (categories.length <= 1) {
+        alert('請至少保留一個分類！');
+        return;
+      }
+      categories.splice(index, 1);
+      saveToStorage();
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentBase64Image = e.target.result;
+          document.getElementById('imagePreview').src = currentBase64Image;
+          document.getElementById('imagePreviewContainer').classList.remove('hidden');
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function removeImage() {
+      currentBase64Image = '';
+      document.getElementById('itemImage').value = '';
+      document.getElementById('imagePreviewContainer').classList.add('hidden');
+    }
+
+    function openModal(editId = null) {
+      document.getElementById('itemForm').reset();
+      removeImage();
+
+      if (editId) {
+        const item = items.find(i => i.id === editId);
+        if (item) {
+          document.getElementById('modalTitle').innerText = '編輯購物項目';
+          document.getElementById('editItemId').value = item.id;
+          document.getElementById('itemName').value = item.name;
+          document.getElementById('itemCategory').value = item.category;
+          document.getElementById('itemQty').value = item.qty;
+          document.getElementById('itemPrice').value = item.price || '';
+          document.getElementById('itemNote').value = item.note || '';
+          if (item.image) {
+            currentBase64Image = item.image;
+            document.getElementById('imagePreview').src = currentBase64Image;
+            document.getElementById('imagePreviewContainer').classList.remove('hidden');
+          }
+        }
+      } else {
+        document.getElementById('modalTitle').innerText = '新增日本購物項目';
+        document.getElementById('editItemId').value = '';
+      }
+
+      document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('itemModal').classList.add('hidden');
+    }
+
+    function toggleCategoryModal() {
+      document.getElementById('categoryModal').classList.toggle('hidden');
+    }
+
+    function togglePhrasesModal() {
+      document.getElementById('phrasesModal').classList.toggle('hidden');
+    }
+
+    function saveItem(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editItemId').value;
+      const name = document.getElementById('itemName').value;
+      const category = document.getElementById('itemCategory').value;
+      const qty = parseInt(document.getElementById('itemQty').value) || 1;
+      const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+      const note = document.getElementById('itemNote').value;
+
+      if (editId) {
+        items = items.map(item => item.id == editId ? {
+          ...item, name, category, qty, price, note, image: currentBase64Image
+        } : item);
+      } else {
+        items.unshift({
+          id: Date.now(),
+          name, category, qty, price, note, image: currentBase64Image, completed: false
+        });
+      }
+
+      saveToStorage();
+      closeModal();
+    }
+
+    function addPreset(name, category, price) {
+      items.unshift({
+        id: Date.now(),
+        name, category, qty: 1, price, note: '', image: '', completed: false
+      });
+      saveToStorage();
+    }
+
+    function toggleComplete(id) {
+      items = items.map(item => item.id === id ? {...item, completed: !item.completed} : item);
+      saveToStorage();
+    }
+
+    function deleteItem(id) {
+      items = items.filter(item => item.id !== id);
+      saveToStorage();
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      renderCategories();
+      renderItems();
+    }
+
+    function renderItems() {
+      const container = document.getElementById('itemList');
+      container.innerHTML = '';
+
+      let totalJPY = 0;
+      const filtered = items.filter(item => currentCategory === '全部' || item.category === currentCategory);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">此分類暫無購物項目</div>`;
+        document.getElementById('totalJPY').innerText = '¥0';
+        return;
+      }
+
+      if (viewMode === 'grid') {
+        container.className = 'grid grid-cols-2 gap-2.5';
+        filtered.forEach(item => {
+          if (!item.completed) totalJPY += (item.price * item.qty);
+          const hkd = (item.price * exchangeRate * item.qty).toFixed(0);
+
+          const card = document.createElement('div');
+          card.className = `bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden flex flex-col justify-between ${item.completed ? 'opacity-50 bg-slate-50' : ''}`;
+          
+          card.innerHTML = `
+            <div>
+              <div class="relative bg-slate-100 h-32 flex items-center justify-center overflow-hidden group">
+                ${item.image 
+                  ? `<img src="${item.image}" onclick="openLightbox('${item.image}', '${item.name}')" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-all">`
+                  : `<i class="fa-solid fa-bag-shopping text-3xl text-slate-300"></i>`
+                }
+                <span class="absolute top-1.5 left-1.5 text-[10px] bg-slate-900/70 text-white px-1.5 py-0.5 rounded backdrop-blur-xs">${item.category}</span>
+              </div>
+              <div class="p-2.5">
+                <div class="flex items-start gap-1.5">
+                  <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleComplete(${item.id})" class="w-4 h-4 accent-red-600 rounded mt-0.5 cursor-pointer">
+                  <span class="font-bold text-xs text-slate-800 line-clamp-2 ${item.completed ? 'line-through text-slate-400' : ''}">${item.name}</span>
+                </div>
+                ${item.note ? `<p class="text-[10px] text-rose-600 mt-1 line-clamp-1">💡 ${item.note}</p>` : ''}
+              </div>
+            </div>
+
+            <div class="p-2.5 pt-0 border-t border-slate-100 mt-1 flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold text-red-600">¥${item.price || 0}</p>
+                <p class="text-[10px] text-slate-400">x${item.qty} (~HK$${hkd})</p>
+              </div>
+              <div class="flex gap-1 text-slate-400 text-xs">
+                <button onclick="openModal(${item.id})" class="hover:text-blue-600 p-1"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="deleteItem(${item.id})" class="hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } else {
+        container.className = 'space-y-2.5';
+        filtered.forEach(item => {
+          if (!item.completed) totalJPY += (item.price * item.qty);
+          const hkd = (item.price * exchangeRate * item.qty).toFixed(0);
+
+          const card = document.createElement('div');
+          card.className = `bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs flex items-center justify-between gap-2.5 ${item.completed ? 'opacity-50 bg-slate-50' : ''}`;
+          
+          card.innerHTML = `
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+              <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleComplete(${item.id})" class="w-5 h-5 accent-red-600 rounded cursor-pointer">
+              
+              ${item.image ? `<img src="${item.image}" onclick="openLightbox('${item.image}', '${item.name}')" class="w-12 h-12 object-cover rounded-lg border flex-shrink-0 cursor-pointer hover:opacity-80 transition-all">` : ''}
+              
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-sm text-slate-800 ${item.completed ? 'line-through text-slate-400' : ''}">${item.name}</span>
+                  <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${item.category}</span>
+                </div>
+                <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                  <span>數量: ${item.qty}</span>
+                  ${item.price ? `<span class="text-red-600 font-semibold">¥${item.price} (約HK$${hkd})</span>` : ''}
+                </div>
+                ${item.note ? `<p class="text-[11px] text-rose-600 mt-0.5">💡 ${item.note}</p>` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 text-slate-300">
+              <button onclick="openModal(${item.id})" class="hover:text-blue-600 p-1.5"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteItem(${item.id})" class="hover:text-red-500 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      document.getElementById('totalJPY').innerText = `¥${totalJPY.toLocaleString()}`;
+    }
+
+    renderCategories();
+    renderItems();
+  </script>
+</body>
+</html>
